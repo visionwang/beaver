@@ -17,6 +17,9 @@ Tip:
 **DatagramChannel**： 能通过UDP读写网络中的数据。
 **SocketChannel**： 能通过TCP读写网络中的数据。
 **ServerSocketChannel**：可以监听新进来的TCP连接，像Web服务器那样。对每一个新进来的连接都会创建一个SocketChannel。
+接下里通过一个TCP客户端的NIO实现来熟悉`Channel`的应用。
+
+
 
 ## Buffer ##
 NIO中主要的Buffer实现包括ByteBuffer, CharBuffer, DoubleBuffer, FloatBuffer, IntBuffer, LongBuffer, ShortBuffer等，分别对应相应的基础类型，Buffer的主要作用请见下图。

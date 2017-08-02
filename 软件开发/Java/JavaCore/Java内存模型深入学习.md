@@ -25,7 +25,9 @@ happens-before
 
 内存模型综述
 
-
+transient
+volatile
+synchronize
 
 
 
