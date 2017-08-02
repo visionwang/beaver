@@ -33,7 +33,7 @@ Docker Pub:本地用户目录.dockercfg中存储登录信息，在仓库中存�
 
 Tip:
 CURL（CommandLine Uniform Resource Locator）:curl是利用URL语法在命令行方式下工作的开源文件传输工具。
-**安装Docker**(Ubuntu16.04)
+**安装Docker**(Ubuntu16.04)，默认安装在`/var/lib/docker`
 
 	sudo apt-get install apt-transport-https
 	sudo apt-get update
@@ -42,6 +42,7 @@ CURL（CommandLine Uniform Resource Locator）:curl是利用URL语法在命令�
 Tip:
 在用putty连接阿里云时，经常会断开，如何解决？
 解决方法：在Connection里面有个Seconds between keepaliaves。这里就是每间隔指定的秒数，就给服务器发送一个空的数据包，来保持连接。以免登录的主机那边在长时间没接到数据后，会自动断开SSH的连接，设置为10。
+阿里云购买ECS， 操作系统版本Ubuntu 16.04（LTS）
 
 # 进阶概念 #
 **数据管理**:在使用docker过程中，会涉及查看容器内应用产生的数据，或者数据在多个容器间共享，此时需要管理数据的两种方式包括数据卷Data Volumes和数据卷容器Data Volume Containers. 
@@ -79,7 +80,7 @@ Tip:编辑工具包括vi或者sed --in-place，推荐挂载目录而不是文件
 	docker run -d -P --name web --link db:db training/webapp python app.py
 	docker ps
 Docker通过两种方式为容器公开连接信息，包括环境变量`env`和/etc/hosts文件，通过`apt-get install -yqq inetutils-ping`安装ping。
-扩展知识：Docker核心技术、Docker安全、高级网络配置、其他项目
+**扩展知识**：Docker已有的实现PaaS的项目有Deis、Flynn等，持续集成方面有Drone，管理工具有Citadel, Shipyard， DockerUI等。
 
 # 使用Dockerfile创建镜像 #
 **基本结构**：dockerfile由命令语句组成，支持#开头的注释，分为4个部分，包括基础镜像信息、维护者信息、镜像操作指令和容器启动执行指令，在**docker hub上有很多dockerfile的demo**，需要时可以直接使用。
@@ -108,14 +109,14 @@ VOLUME `["/data"]`创建一个可以从本地主机或其他容器挂载的挂�
 USER `daemon`指定运行容器时的UID，后续的`RUN`也会使用指定用户，如`RUN group add -r postgres && useradd -r -g postgres postgres`，要获取管理员权限时可以使用`gosu`而不是`sudo`
 WORKDIR `path/to/workdir`为后续的指令配置工作目录
 ONBUILD `[INSTRUCTION]`配置当所创建的镜像作为其他新创建镜像的基础镜像时，所执行的操作指令。
-![](http://i.imgur.com/6mKi3y5.png)
+![](http://i.imgur.com/iG78WYg.png)
 **创建镜像**：编写好dockerfile后，可以通过`docker build`命令来创建镜像，该命令将读取指定路径下（包括子目录）的dockerfile，并将该路径下所有内容发送给docker服务端，由服务端来创建镜像，此外可以通过`.dockerignore`文件来忽略目录或文件，还可以通过`-t`指定镜像的标签信息。示例`docker build -t build_repo/first_image /tmp/docker_builder/`
 
 # 实践之道 #
 **操作系统**:CentOS和Ubuntu都可以，个人喜好ubuntu（还可以选用debian:jessie， alpine），属于最基础的镜像。
 tip: 当试图安装软件出现没有相关包信息时，需要`apt-get update`或编辑`/etc/apt/sources.list`文件（`deb, deb-src`,需要时在查询，比如163的镜像，阿里云的话无需设置）,可以通过`netstat -tunlp`查看当前网络情况。
 **支持SSH**：当需要直接进入容器进行管理时安装，不必须。
-**Web服务器与应用**(Nginx,可以使用淘宝优化的Tengine代替Nginx，Tomcat)：在`/root`下创建`tomcat`,`nginx`目录应用存放Dockerfile文件，最终还是选择通过pull拉去镜像的方式安装应用，dockerfile比较复杂。
+**Web服务器与应用**(Nginx,可以使用淘宝优化的Tengine代替Nginx，Tomcat)：在`/usr/docker`下创建`tomcat`,`nginx`目录应用存放Dockerfile文件，最终还是选择通过pull拉去镜像的方式安装应用，dockerfile比较复杂。
 
 	docker pull nginx
 	docker ps -a
@@ -134,29 +135,32 @@ tip:有时可能需要重启docker服务, `service docker restart`，可以选�
 **数据库应用**MySQL, MongoDB, Redis
 	
 	docker pull mysql
-	docker run -p 3306:3306 --name mysql01 -v $PWD/conf:/etc/mysql -v $PWD/logs:/logs -v $PWD/data:/mysql_data -e MYSQL_ROOT_PASSWORD=xxxxx -d mysql
+	docker run -p 3306:3306 --name mysql01 -v $PWD/conf:/etc/mysql -v $PWD/logs:/logs -v $PWD/data:/mysql_data -e MYSQL_ROOT_PASSWORD=123456 -d mysql
 	//主从模式
-	docker run -d -e REPLICATION_MASTER=true -P --name mysql01 mysql
-	docker run -d -e REPLICATION_SLAVE=true -P --name mysql02 --link mysql01:mysql01 mysql
-	//mongodb
+	docker run -p 3306:3306 --name mysql01 -v $PWD/conf01:/etc/mysql -v $PWD/logs01:/logs -v $PWD/data01:/mysql_data -e MYSQL_ROOT_PASSWORD=123456 -e REPLICATION_MASTER=true -d mysql
+	docker run -p 3307:3306 --name mysql02 -v $PWD/conf02:/etc/mysql -v $PWD/logs02:/logs -v $PWD/data02:/mysql_data -e MYSQL_ROOT_PASSWORD=123456 -e REPLICATION_SLAVE=true --link mysql01:mysql01 -d mysql
+	//mongodb，暂时单机，其默认提供集群的配置
 	docker pull mongo
-	docker run -p 27017:27017 --name mongodb01 -v $PWD/db:/data/db -d mongo
+	docker run -p 27017:27017 -p 28017:28017 --name mongodb01 -v $PWD/db01:/data/db -e MONGODN_PASS="123456" -d mongo
 	//redis
 	docker pull  redis
-	docker run -p 6379:6379 --name redis01 -v $PWD/data:/data  -d redis redis-server --appendonly yes
+	docker run -p 6379:6379 --name redis01 -v $PWD/data01:/data  -d redis redis-server --appendonly yes
 tip:可以进入db的容器进行操作，`docker exec -ti mysql /bin/bash`
-**构建Docker容器集群**：
-**阿里云安装Docker**：
+**其他应用**：maven, gitlab, jenkins, dubbo， cat，具体内容将在之后的文章中陆续介绍。
 
-**逻辑上的环境搭建视图**
-
-阿里云购买ECS， 操作系统版本Ubuntu 16.04（LTS）
-**目前实践计划**
+	docker pull jenkins
+	docker run --name jenkins01 -p 9090:8080 -p 9091:50000 -v $PWD/jenkins01:/var/jenkins_home -d jenkins
+**构建Docker容器集群**：核心问题就是让不同主机中的Docker容器相互访问，简单的方式包括两种。使用自定义网桥连接跨主机容器，Docker默认的网桥是docker0，可以通过`brctl show`查看。使用Ambassador容器：当2个docker容器再同意主机时，可以通过--link相互访问，如果需要跨主机实现，则需要知道其他物理主机的IP地址。
+**Docker CI集成方案**：在之后的Jenkins一文中将重点分析。
+![](http://i.imgur.com/Bj31UFs.png)
+Tip:目前百度BAE已经在生产环境使用Docker，Airbnb,ebay已使用mesos集成docker部署应用，此外可以使用apparmor对容器的能力进行限制。
+个人目前实践计划
 私有Docker仓库暂时不建立，先使用DockerHub；Git类似，先使用Github；Maven需要使用Nexus建立一个私有库；jenkins之间搭建就好。
 
 **参考资料**
 1. 杨保华. Docker技术入门与实践[M]. 北京:机械工业出版社, 2016.
 2. [Docker常见安装指南](http://www.runoob.com/docker/ubuntu-docker-install.html)
+3. [Docker结合jenkins](https://my.oschina.net/donhui/blog/470372)
 
 
 
