@@ -49,6 +49,18 @@ Tip:
 			}
 		}
 	}
+比对一下传统的IO
+
+	try (RandomAccessFile aFile = new RandomAccessFile("src/test/resources/test.xml", "r");
+			CloseableHttpClient client = HttpClients.createDefault();) {
+		// 1.读数据
+		byte[] buffer = new byte[1024];
+		StringBuilder requestString = new StringBuilder();
+		int bytesRead = 0;
+		while (-1 != (bytesRead = aFile.read(buffer))) {
+			requestString.append(new String(buffer), 0, bytesRead);
+		}
+	}
 
 ## Buffer ##
 NIO中主要的Buffer实现包括ByteBuffer, CharBuffer, DoubleBuffer, FloatBuffer, IntBuffer, LongBuffer, ShortBuffer等，分别对应相应的基础类型，Buffer的主要作用请见下图。
