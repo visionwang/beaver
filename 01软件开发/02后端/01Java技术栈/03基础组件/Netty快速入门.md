@@ -141,3 +141,10 @@ Preface
 7.3.3. Canceling tasks
 7.3.4. Callbacks
 7.3.5. Metrics
+
+
+**参考资料**
+[Netty是什么？](http://lippeng.iteye.com/blog/1907279)
+[Netty源码解读](http://ifeve.com/netty1/)
+[使用JAVA操作netty框架](http://flychao88.iteye.com/blog/1553058)
+[对于Netty的十一个疑问](https://news.cnblogs.com/n/205413/)

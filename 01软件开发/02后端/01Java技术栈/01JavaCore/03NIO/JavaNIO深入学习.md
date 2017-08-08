@@ -183,23 +183,7 @@ Selector允许单线程处理多个 Channel。如果你的应用打开了多个�
 
 # 进阶概念 #
 ### 内存映射文件 ###
-JAVA处理大文件，一般用BufferedReader,BufferedInputStream这类带缓冲的IO类，不过如果文件超大的话，更快的方式是采用MappedByteBuffer。MappedByteBuffer是NIO引入的文件内存映射方案，读写性能极高。
-
-SocketChannel的读写是通过一个类叫ByteBuffer来操作的.这个类本身的设计是不错的,比直接操作byte[]方便多了. ByteBuffer有两种模式:直接/间接.间接模式最典型(也只有这么一种)的就是HeapByteBuffer,即操作堆内存 (byte[]).但是内存毕竟有限,如果我要发送一个1G的文件怎么办?不可能真的去分配1G的内存.这时就必须使用”直接”模式,即 MappedByteBuffer,文件映射.
-
-先中断一下,谈谈操作系统的内存管理.一般操作系统的内存分两部分:物理内存;虚拟内存.虚拟内存一般使用的是页面映像文件,即硬盘中的某个(某些)特殊的文件.操作系统负责页面文件内容的读写,这个过程叫”页面中断/切换”. MappedByteBuffer也是类似的,你可以把整个文件(不管文件有多大)看成是一个ByteBuffer.MappedByteBuffer 只是一种特殊的ByteBuffer，即是ByteBuffer的子类。 MappedByteBuffer 将文件直接映射到内存（这里的内存指的是虚拟内存，并不是物理内存）。通常，可以映射整个文件，如果文件比较大的话可以分段进行映射，只要指定文件的那个部分就可以。
-
-概念
-FileChannel提供了map方法来把文件影射为内存映像文件： MappedByteBuffer map(int mode,long position,long size); 可以把文件的从position开始的size大小的区域映射为内存映像文件，mode指出了 可访问该内存映像文件的方式：
-
-READ_ONLY,（只读）： 试图修改得到的缓冲区将导致抛出 ReadOnlyBufferException.(MapMode.READ_ONLY)
-READ_WRITE（读/写）： 对得到的缓冲区的更改最终将传播到文件；该更改对映射到同一文件的其他程序不一定是可见的。 (MapMode.READ_WRITE)
-PRIVATE（专用）： 对得到的缓冲区的更改不会传播到文件，并且该更改对映射到同一文件的其他程序也不是可见的；相反，会创建缓冲区已修改部分的专用副本。 (MapMode.PRIVATE)
-MappedByteBuffer是ByteBuffer的子类，其扩充了三个方法：
-
-force()：缓冲区是READ_WRITE模式下，此方法对缓冲区内容的修改强行写入文件；
-load()：将缓冲区的内容载入内存，并返回该缓冲区的引用；
-isLoaded()：如果缓冲区的内容在物理内存中，则返回真，否则返回假；
+对于内存映射文件，大家应该不会陌生，大学里学习windows网络编程时就终点介绍过该概念。在JAVA中，一般用`BufferedReader`，`BufferedInputStream`的来处理大文件。而当文件超大时推荐使用`MappedByteBuffer`，其是NIO引入的文件内存映射方案，读写性能极高。一般操作系统的内存包括物理内存和虚拟内存。其中虚拟内存一般使用的是页面映像文件，即硬盘中的某个特殊的文件。操作系统负责该页面文件内容的读写，这个过程叫**”页面中断/切换”**。MappedByteBuffer与其类似，可以看做一个超级大的`ByteBuffer`，示例如下所示。
 
 	public static void method4(){
 	      RandomAccessFile aFile = null;
@@ -477,11 +461,10 @@ Java的Path接口是Java NIO2 的一部分，是对Java6 和Java7的 NIO的更�
 
 在很多地方java.nio.file.Path接口和java.io.File类是相似的，但是它们有几个主要的不同。 在很多类中，你可以使用Path 接口替换 file 类使用。
 
+Tip:
+之后的文章中将对Netty框架进行介绍，其是NIO的封装库。
+
 **参考资料**
 [netty官网](http://netty.io/)
 [Java NIO系列教程](http://ifeve.com/overview/)
 [攻破JAVA NIO技术壁垒](http://www.importnew.com/19816.html)
-[Netty是什么？](http://lippeng.iteye.com/blog/1907279)
-[Netty源码解读](http://ifeve.com/netty1/)
-[使用JAVA操作netty框架](http://flychao88.iteye.com/blog/1553058)
-[对于Netty的十一个疑问](https://news.cnblogs.com/n/205413/)
