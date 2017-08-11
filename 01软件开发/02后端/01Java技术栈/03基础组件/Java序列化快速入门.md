@@ -37,3 +37,23 @@ Home » com.fasterxml.jackson.core » jackson-core
 
 目前来看还是dom4j比较给力
 
+
+
+
+补充：XML基础知识
+
+XML基本语法：标签语法，字符、命名；文档部分；元素，起始标签、结束标签、空元素标签、文档元素、元素嵌套、字符串；字符数据；属性，空白、行尾的处理；注释；CDATA部分，<![DATA[…]]>；格式正规的文档。
+XML命名空间：声明，修饰名，作用范围。
+DTD：过时的XML文档约束方案，现在对采用XML Schema和xslt。
+
+XML Schema的文档结构
+<?xml version=”1.0”?>
+<Schema xmlns=”urn:schemas-microsoft-com:xml-data” xmlns:dt=”urn:schemas-microsoft-com:datatypes”>
+</Schema>
+元素的定义：<ElementType name=”date” dt:type=”date”>，出现次数maxOccurs=”*”
+
+可扩展样式语言XSL,XSLT文档，文档结构
+<xsl:stylesheet version=”1.0” xmlns:xsl=”http://www.w3.org/1999/XSL/Transform”>
+</xsl:stylesheet>
+
+XPath, XLink, XPointer使用的场景并不多，一笔带过。
