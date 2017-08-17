@@ -57,3 +57,29 @@ XML Schema的文档结构
 </xsl:stylesheet>
 
 XPath, XLink, XPointer使用的场景并不多，一笔带过。
+
+
+	private List<OrderItemDetailDto> parseOrderItemDetailXml(String orderItemDetail, int orderType) {
+		List<OrderItemDetailDto> result = Lists.newArrayList();
+
+		try {
+			SAXReader saxReader = new SAXReader();
+			Document document = saxReader.read(new ByteArrayInputStream(orderItemDetail.getBytes("UTF-8")));
+			// 3.1获取根元素
+			Element rootElement = document.getRootElement();
+			List<Element> itemElements = rootElement.elements();
+			for (Element iElement : itemElements) {
+				OrderItemDetailDto temp = new OrderItemDetailDto();
+				temp.setAmount(BigDecimal.valueOf(Double.valueOf(iElement.attributeValue("Amount"))));
+				temp.setCategoryID(Integer.valueOf(iElement.attributeValue("CategoryID")));
+				temp.setNeedActive(parseNeedActive(iElement.attributeValue("NeedActive"), orderType));
+				temp.setOrderItemID(Long.valueOf(iElement.attributeValue("OrderItemID")));
+				temp.settCount(Integer.valueOf(iElement.attributeValue("TCount")));
+				temp.setTcType(Integer.valueOf(iElement.attributeValue("TCType")));
+				result.add(temp);
+			}
+			return result;
+		} catch (Exception ex) {
+			logger.warn(ex.getMessage(), ex);
+		}
+	}
