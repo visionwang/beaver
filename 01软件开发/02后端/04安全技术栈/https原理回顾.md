@@ -57,3 +57,12 @@ BASE64
 MD5
 
 http://www.gson.org/
+
+
+
+
+Https协议原理
+
+SSL/TLS
+
+部署HTTPS WEB

@@ -1,5 +1,22 @@
 Springboot中使用AOP特性非常简单，使用`@AspectJ`注解，然后再配置中开启`AspectJ`即可。在日常的应用，有时可以将日志记录和异常处理在一个拦截器中统一处理，但有时在项目中无法通过一个拦截器解决所有切面问题，此时，就需要将日志、异常处理等拦截器功能拆分开来，但有一点是相同的，就是在需要时增加一个抽象层次用于拦截。
 
+[spring aop之对象内部方法间的嵌套失效]
+http://blog.csdn.net/doctor_who2004/article/details/51814476
+
+[Spring 嵌套AOP 的顺序问题 指定Aspect优先级]
+http://www.cnblogs.com/daxin/archive/2013/06/01/3112049.html
+
+
+负载均衡
+[{"routeId":"default-route-rule","serverGroups":[{"groupId":"default-group-key","weight":5,"servers":[{"serverId":"platform.lipin.lipinpayws.v1.lipinpayws","metadata":{"url":"http://ws.account.giftcard.uat.qa.nt.ctripcorp.com/GCPayWS","isManualInstance":"true","healthCheckUrl":"http://ws.account.giftcard.uat.qa.nt.ctripcorp.com/GCPayWS/checkhealth.json"},"alive":true}],"metadata":{}}]}]
+
+
+[cat-client]: Router service response: {"kvs":{"enableCatFilter":"true","startTransactionTypes":"Cache.;Redis;Memcached","bizLogEnable":"true","logServers":"10.2.25.122:2280;10.2.25.138:2280;","globalClockConfig":"10.2.25.138:8080;true;false;2;true;false;2","enable":"true","matchTransactionTypes":"SQL;Message.Produce.Tried;Message.Consume.Poll.Tried","catLogEnable":"true","routers":"10.2.25.122:2280;10.2.25.123:2280;","logSample":"1.0","sample":"1.0"}}
+
+[SpringAOP嵌套调用的解决办法]
+http://fyting.iteye.com/blog/109236
+
+
 # 基础知识 #
 这部分的细节主要是注解的使用，可以参看之后示例。
 参考资料
@@ -13,6 +30,11 @@ AOP配置
 	@EnableAspectJAutoProxy
 	public class AOPConfig {
 	}
+
+
+
+			ReflectionUtils.makeAccessible(method);
+			return method.invoke(target, args);
 
 
 Log（AOP）实例
