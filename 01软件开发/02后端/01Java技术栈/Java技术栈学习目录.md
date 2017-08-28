@@ -15,11 +15,12 @@
 [jdk8&maven快速入门](http://www.cnblogs.com/wanliwang01/p/jdk8_maven.html)
 
 # Jvm #
-[Jvm深入学习--01自动内存管理机制]()
-[Jvm深入学习--02虚拟机执行子系统]()
-[Jvm深入学习--03程序编译与优化]()
-[Jvm深入学习--04高效并发]()
-[OSGI快速入门]()
+[Jvm深入学习--01自动内存管理机制]
+[Jvm深入学习--02虚拟机执行子系统]
+[Jvm深入学习--03程序编译与优化]
+[Jvm深入学习--04高效并发]
+[OSGI快速入门]
+[JVM快速学习](http://www.cnblogs.com/wanliwang01/p/JVM_Base.html)
 
 # 基础组件 #
 [Java开发—乘风破浪(持续更新)](http://www.cnblogs.com/wanliwang01/p/java_core01.html)：熟悉基础组件
