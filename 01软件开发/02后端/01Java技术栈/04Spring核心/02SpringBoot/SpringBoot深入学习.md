@@ -1,11 +1,26 @@
 
 
 
-# 基本概念 #
+# 微服务基础概念 #
+微服务虽然是最近一两年兴起的一个比较时髦的技术名词，但实际上其并非是什么新的理念，很多比较好的企业早都已经在使用和实施微服务了，其本质就是SOA概念的进一步发展。
 
-3. [Docker结合jenkins](https://my.oschina.net/donhui/blog/470372)
-4. https://www.zhihu.com/question/25385945
 
+
+# Spring与SpringBoot基础知识 #
+
+
+
+# SpringBoot微服务实践 #
+
+
+#补充知识#
+spring-boot-starter基础知识
+
+Scala
+
+
+**参考资料**
+1. 王福强. SpringBoot揭秘[M]. 北京:机械工业出版社, 2017.
 
 
 
