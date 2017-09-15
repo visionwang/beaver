@@ -146,3 +146,27 @@ Exception （AOP）实例
 			return result;
 		}
 	}
+
+AutoConfiguration配置
+
+
+	@SpringBootApplication(exclude = { DataSourceAutoConfiguration.class })
+	//@SpringBootApplication
+	@ComponentScan("com.xxx.ws")
+	public class ServiceInitializer extends SpringBootServletInitializer {
+	
+		@Override
+		protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
+			return application.sources(ServiceInitializer.class);
+		}
+	
+		@Bean
+		public LogAspect logAspect() {
+			return new LogAspect();
+		}
+	
+		@Bean
+		public ServiceExceptionAspect serviceExceptionAspect() {
+			return new ServiceExceptionAspect();
+		}
+	}
