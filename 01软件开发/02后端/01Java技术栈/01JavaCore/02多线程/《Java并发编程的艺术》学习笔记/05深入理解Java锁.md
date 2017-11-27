@@ -1,495 +1,196 @@
-之前面试baba系时遇到一个相对简单的多线程编程题，即"3个线程循环输出ADC"，自己答的并不是很好，深感内疚，决定更加仔细的学习《并发编程的艺术》一书，到达掌握的强度。（之前两月休息时间都花在了lol和吃鸡上，算是劳逸结合了，推荐大家代码写累了可以玩下吃鸡，是个不错的调剂）
 
-# 流程分析 #
-Java的线程池是最常用的并发框架，合理的使用线程池可以**降低系统消耗、提高响应速度、提高线程的可管理性**。线程池的基础处理流程如下图所示。
-![](https://i.imgur.com/lWYHPvT.png)
-上图中标红的4处正好是构建**线程池的核心，核心线程池大小，队列，线程池大小，拒绝策略**4个部分。通常来说，会根据当前系统的CPU数量来设置线程大小，并且一个应用中共用一个线程池，便于管理，过多的线程因为调度切换的原因，反而不能提高系统资源的利用率，如下是个人常用线程池管理类，不过现在对于`AtomicReference`的用法不是特别理解。
-
-	/**
-	 * 单个应用共用一个线程池，便于管理
-	 */
-	public class ApplicationExecutorFactory {
-		private static AtomicReference<ExecutorService> serviceRef = new AtomicReference<>(
-				Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2));
-	
-		public static ExecutorService getExecutor() {
-			return serviceRef.get();
-		}
-	
-		public static void shutdown() {
-			if (serviceRef.get() == null)
-				return;
-	
-			synchronized (ApplicationExecutorFactory.class) {
-				if (serviceRef.get() == null)
-					return;
-	
-				serviceRef.get().shutdown();
-				serviceRef.set(null);
-			}
-		}
-	}
-
-接下来来看看最常用的固定大小线程`newFixedThreadPool()`的构造方法，可以看到下面代码中，核心线程池大小和线程池最大大小是一致的，队列使用的链表形式的阻塞队列（默认大小为Int最大值），线程工厂`DefaultThreadFactory`和拒绝处理器`AbortPolicy`也是使用的默认的。
-
-	//按照层次剖析，涉及类Executors, ThreadPoolExecutor, LinkedBlockingQueue
-    public static ExecutorService newFixedThreadPool(int nThreads) {
-        return new ThreadPoolExecutor(nThreads, nThreads,
-                                      0L, TimeUnit.MILLISECONDS,
-                                      new LinkedBlockingQueue<Runnable>());
-    }
-    public ThreadPoolExecutor(int corePoolSize,
-                              int maximumPoolSize,
-                              long keepAliveTime,
-                              TimeUnit unit,
-                              BlockingQueue<Runnable> workQueue) {
-        this(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue,
-             Executors.defaultThreadFactory(), defaultHandler);
-    }
-    public static ThreadFactory defaultThreadFactory() {
-        return new DefaultThreadFactory();
-    }
-    private static final RejectedExecutionHandler defaultHandler =
-        new AbortPolicy();
-    public LinkedBlockingQueue() {
-        this(Integer.MAX_VALUE);
-    }
-
-Tip:
-这个引入几个问题来加强学习。
-**a.阻塞队列（也叫任务队列）的类型有哪些？队列大小为Integer.MAX_VALUE合适么**？什么是有界队列，什么是无界队列？无界队列是不是会造成`maximuxPoolSize`失效？
-ArrayBlockingQueue: 基于数组结构的有界阻塞队列，遵循FIFO
-**LinkedBlockingQueue**:基于链表的阻塞队列，吞吐量一般高于ArrayBlockingQueue，固定大小的线程池就是使用的该队列。
-SynchronousQueue: 一个不存储元素的阻塞队列（有意思），每个插入操作必须等到另一个线程调用移除操作，否则插入操作一直阻塞。吐吞量Ibanez高于LinkedBlockingQueue，CachedThreadPool使用了该队列，**目前                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               还没有很好的理解？**
-PriorityBlockingQueue: 一个具有优先级的无限阻塞队列。
-**b.如果希望给线程池中线程取名怎么办？**           
-使用guava的`ThreadFactoryBuilder`可以快速的给线程池里线程设置有意义名字。
-**c.线程池除了固定大小的，还有哪些类型，根据场景如何取舍？**（该问题将在Executor一节回答）
-d.拒绝策略（也叫饱和策略）有哪些？
-**AbortPolicy**: 直接抛出异常
-**CallerRunsPolicy**: 只用调用者所在线程来运行任务，如何理解？
-**DiscardOldestPolicy**:丢弃队列最老任务，并执行当前任务
-**DiscardPolicy**:直接抛弃不处理
-此外，还可以根据场景需要自己来实现`RejectedExecutionHandler`接口，来记录日志或持久化存储不能处理的任务。
-e.`keepAliveTime`, `TimeUnit`参数有什么用?该参数决定工作线程空闲后存活的时间，对于任务很多但单个任务执行时间短的场景，可以调大时间提高利用率，看到这可以发现很多中间件都可以做出来。
+ReentrantLock 锁有好几种，除了常用的lock ，tryLock ，其中有个lockInterruptibly 。
 
 
-# 运行机制 #
-接下来通过下图更进一步了解线程池的运行机制。
-![](https://i.imgur.com/4uBrKYr.png)
-1.如果当前运行的线程少于corePoolSize直接创建新线程来执行任务，**需要获取全局锁**。
-2.如果运行的线程等于或多余corePoolSize则将任务加入BlockingQueue。
-3.如果由于队列已满，无法将任务加到BlockingQueue，则创建新的线程来处任务，需要获取全局锁。
-4.如果创建新线程将操作maximumPoolSize，任务将被拒绝，并调用RejectedExecutionHandler.rejectedExecution()方法。
-ThreadPoolExecutor采用上述步骤，保证了执行`execute()`时，尽可能的避免了获取全局锁，大部分的可能都会执行步骤2，而无需获取全局锁。上图就是通过下面的源代码形象化出来的。
 
-	//老版本JDK，便于理解
-	public void execute(Runnable command) {
-	    if (command == null)
-	        throw new NullPointerException();
-	//由于是或条件运算符，所以先计算前半部分的值，如果线程池中当前线程数不小于核心池大小
-	//，那么就会直接进入下面的if语句块了。
-	　	//如果线程池中当前线程数小于核心池大小，则接着执行后半部分，也就是执行
-	    if (poolSize >= corePoolSize || !addIfUnderCorePoolSize(command)) {
-		//如果当前线程池处于RUNNING状态，则将任务放入任务缓存队列；
-	        if (runState == RUNNING && workQueue.offer(command)) {
-			//这句判断是为了防止在将此任务添加进任务缓存队列的同时其他线程突然调用shutdown
-			//或者shutdownNow方法关闭了线程池的一种应急措施
-	            if (runState != RUNNING || poolSize == 0)
-	                ensureQueuedTaskHandled(command);
-	        }
-		//如果当前线程池不处于RUNNING状态或者任务放入缓存队列失败，则执行
-	        else if (!addIfUnderMaximumPoolSize(command))
-	            reject(command); // is shutdown or saturated
-	    }
-	}
-
-	private boolean addIfUnderCorePoolSize(Runnable firstTask) {
-	    Thread t = null;
-		//首先获取到锁，因为这地方涉及到线程池状态的变化，先通过if语句判断当前线程池中的线程数目是否小于核心池大小，
-		//有朋友也许会有疑问：前面在execute()方法中不是已经判断过了吗，只有线程池当前线程数目小于核心池大小才会执行addIfUnderCorePoolSize方法的，为何这地方还要继续判断？
-		//原因很简单，前面的判断过程中并没有加锁，因此可能在execute方法判断的时候poolSize小于corePoolSize，而判断完之后，
-		//在其他线程中又向线程池提交了任务，就可能导致poolSize不小于corePoolSize了，所以需要在这个地方继续判断。
-	    final ReentrantLock mainLock = this.mainLock;
-	    mainLock.lock();
-	    try {
-	        if (poolSize < corePoolSize && runState == RUNNING)
-	            t = addThread(firstTask);        //创建线程去执行firstTask任务   
-	        } finally {
-	        mainLock.unlock();
-	    }
-	    if (t == null)
-	        return false;
-	    t.start();
-	    return true;
-	}
-
-	//在addThread方法中，首先用提交的任务创建了一个Worker对象，然后调用线程工厂threadFactory创建了一个新的线程t，
-	//然后将线程t的引用赋值给了Worker对象的成员变量thread，接着通过workers.add(w)将Worker对象添加到工作集当中。
-	private Thread addThread(Runnable firstTask) {
-	    Worker w = new Worker(firstTask);
-	    Thread t = threadFactory.newThread(w);  //创建一个线程，执行任务   
-	    if (t != null) {
-	        w.thread = t;            //将创建的线程的引用赋值为w的成员变量       
-	        workers.add(w);
-	        int nt = ++poolSize;     //当前线程数加1       
-	        if (nt > largestPoolSize)
-	            largestPoolSize = nt;
-	    }
-	    return t;
-	}
-
-	private final class Worker implements Runnable {
-	    private final ReentrantLock runLock = new ReentrantLock();
-	    private Runnable firstTask;
-	    volatile long completedTasks;
-	    Thread thread;
-	    Worker(Runnable firstTask) {
-	        this.firstTask = firstTask;
-	    }
-	    boolean isActive() {
-	        return runLock.isLocked();
-	    }
-	    void interruptIfIdle() {
-	        final ReentrantLock runLock = this.runLock;
-	        if (runLock.tryLock()) {
-	            try {
-	        if (thread != Thread.currentThread())
-	        thread.interrupt();
-	            } finally {
-	                runLock.unlock();
-	            }
-	        }
-	    }
-	    void interruptNow() {
-	        thread.interrupt();
-	    }
-	 
-	    private void runTask(Runnable task) {
-	        final ReentrantLock runLock = this.runLock;
-	        runLock.lock();
-	        try {
-	            if (runState < STOP &&
-	                Thread.interrupted() &&
-	                runState >= STOP)
-	            boolean ran = false;
-	            beforeExecute(thread, task);   //beforeExecute方法是ThreadPoolExecutor类的一个方法，没有具体实现，用户可以根据
-	            //自己需要重载这个方法和后面的afterExecute方法来进行一些统计信息，比如某个任务的执行时间等           
-	            try {
-	                task.run();
-	                ran = true;
-	                afterExecute(task, null);
-	                ++completedTasks;
-	            } catch (RuntimeException ex) {
-	                if (!ran)
-	                    afterExecute(task, ex);
-	                throw ex;
-	            }
-	        } finally {
-	            runLock.unlock();
-	        }
-	    }
-	 
-	    public void run() {
-	        try {
-	            Runnable task = firstTask;
-			//　从run方法的实现可以看出，它首先执行的是通过构造器传进来的任务firstTask，在调用runTask()执行完firstTask之后，
-			//在while循环里面不断通过getTask()去取新的任务来执行，那么去哪里取呢？自然是从任务缓存队列里面去取，
-			//getTask是ThreadPoolExecutor类中的方法，并不是Worker类中的方法，下面是getTask方法的实现：
-	            firstTask = null;
-	            while (task != null || (task = getTask()) != null) {
-	                runTask(task);
-	                task = null;
-	            }
-	        } finally {
-	            workerDone(this);   //当任务队列中没有任务时，进行清理工作       
-	        }
-	    }
-	}
-
-	Runnable getTask() {
-	    for (;;) {
-	        try {
-	            int state = runState;
-	            if (state > SHUTDOWN)
-	                return null;
-	            Runnable r;
-	            if (state == SHUTDOWN)  // Help drain queue
-	                r = workQueue.poll();
-	            else if (poolSize > corePoolSize || allowCoreThreadTimeOut) //如果线程数大于核心池大小或者允许为核心池线程设置空闲时间，
-	                //则通过poll取任务，若等待一定的时间取不到任务，则返回null
-	                r = workQueue.poll(keepAliveTime, TimeUnit.NANOSECONDS);
-	            else
-	                r = workQueue.take();
-	            if (r != null)
-	                return r;
-	            if (workerCanExit()) {    //如果没取到任务，即r为null，则判断当前的worker是否可以退出
-	                if (runState >= SHUTDOWN) // Wake up others
-	                    interruptIdleWorkers();   //中断处于空闲状态的worker
-	                return null;
-	            }
-	            // Else retry
-	        } catch (InterruptedException ie) {
-	            // On interruption, re-check runState
-	        }
-	    }
-	}
-
-	//JDK1.8
-    public void execute(Runnable command) {
-        if (command == null)
-            throw new NullPointerException();
-        int c = ctl.get();
-        if (workerCountOf(c) < corePoolSize) {
-            if (addWorker(command, true))
-                return;
-            c = ctl.get();
-        }
-        if (isRunning(c) && workQueue.offer(command)) {
-            int recheck = ctl.get();
-            if (! isRunning(recheck) && remove(command))
-                reject(command);
-            else if (workerCountOf(recheck) == 0)
-                addWorker(null, false);
-        }
-        else if (!addWorker(command, false))
-            reject(command);
-    }
-
-Tip:
-这个引入几个问题来加强学习。
-a.**这儿的全局锁如何理解？**
-b.**线程池有哪些状态**
-在`ThreadPoolExecutor`中定义了一个volatile变量，另外定义了几个static final变量表示线程池的各个状态(JDK1.5，1.8做的更加复杂不适合表述)。
-
-	volatile int runState;
-	static final int RUNNING    = 0;
-	static final int SHUTDOWN   = 1;
-	static final int STOP       = 2;
-	static final int TERMINATED = 3;
-
-runState表示当前线程池的状态，它是一**个volatile变量用来保证线程之间的可见性**，下面的几个static final变量表示runState可能的几个取值。
-当创建线程池后，初始时，线程池处于RUNNING状态；
-如果调用了shutdown()方法，则线程池处于SHUTDOWN状态，此时线程池不能够接受新的任务，它会等待所有任务执行完毕；
-如果调用了shutdownNow()方法，则线程池处于STOP状态，此时线程池不能接受新的任务，并且会去尝试终止正在执行的任务；
-当线程池处于SHUTDOWN或STOP状态，并且所有工作线程已经销毁，任务缓存队列已经清空或执行结束后，线程池被设置为TERMINATED状态。
-
-# 补充知识与自制线程池 #
-**提交任务**：`execute()`, `submit()`提交有返回值的任务
-**关闭线程池**：`shutdown`, `shutdownNow`它们均是遍历线程池中的工作线程，逐个调用`interrupt`方法来中断线程，所有无法响应中断的任务永远无法停止。前者将线程池状态设置为`SHUTDOWN`，然后中断没有执行任务的线程，而后者会将状态设置为`STOP`，然后尝试停止所有正在执行或者暂停执行的线程，并返回等待执行任务的列表。当所有任务都关闭后，才表示线程关闭成功，这是`isTerminated`返回成功。
-**线程池的选择**：通常来说，性质不同的任务可用不同规模的线程池分开处理，CPU密集型的任务应配置尽可能小的线程，而IO密集型可以配置尽可能多的，混合型的任务最好将任务拆分后再做权衡。
-对于数据库请求和服务请求这类IO密集型的操作，可以将线程池设置的相对较大，具体根据线上的情况做权衡（平均耗时）。
-**队列的选择**：建议使用有界队列，避免线程池耗尽整个系统的资源，当然这时就需要很好的提供饱和策略了。
-
-接下来，分享一个个人通过对线程池核心原理的分析，自制的简化线程池。
-
-	public class CustomThreadPool implements ExecutorService {
-		/**
-		 * 线程池状态部分
-		 */
-		volatile int runState;
-		static final int RUNNING = 0;
-		static final int SHUTDOWN = 1;
-		static final int STOP = 2;
-		static final int TERMINATED = 3;
-	
-		/**
-		 * 线程池基础参数部分
-		 */
-		int coreMaxSize;// 最大线程池大小和最大核心线程大小一样，简化
-		final BlockingQueue<Runnable> queue;
-		RejectedExecutionHandler handler;
-		// 线程池不是简单的使用一个List<Thread>管理，而是借助一个Worker的概念，Worker需要线程和Task两个因素才能工作
-		// 想想生产线的工人Worker，task比如是生产一个手套，线程比如就是一个机械臂，可以选择一个空闲的机械臂进行生产
-		final HashSet<CustomWorker> workers = new HashSet<CustomWorker>();
-		final ReentrantLock mainLock = new ReentrantLock();// 线程池的主要状态锁，对线程池状态(大小，runstate)
-		private volatile ThreadFactory threadFactory; // 线程工厂，用来创建线程
-	
-		public CustomThreadPool() {
-			runState = RUNNING;
-			coreMaxSize = 4;
-			queue = new CustomBlockingQueue(100);
-			handler = new CustomRejectedExecutionHandler();
-			threadFactory = new ThreadFactoryBuilder().setNameFormat("").build();
-		}
-	
-		@Override
-		public void execute(Runnable command) {
-			// 1.判断线程池是否已满
-			if (getCurSize() <= coreMaxSize && runState == RUNNING) {
-				createWorker(command);
-				return;
-			}
-			// 2.判断队列是否满了
-			if (getCurSize() <= coreMaxSize && runState == RUNNING) {
-				enqueue(command);
-				return;
-			}
-			// 3.判断线程池子是否满了，省略
-			// 4.按照饱和策略做处理
-			rejectHandle(command);
-		}
-	
-		private void createWorker(Runnable command) {
-			CustomWorker worker = new CustomWorker();
-			Thread thd = threadFactory.newThread(command);
-			worker.setThread(thd);
-	
-			mainLock.lock();
-			try {
-				workers.add(worker);
-			} finally {
-				mainLock.unlock();
-			}
-			worker.run();
-		}
-	
-		private void rejectHandle(Runnable command) {
-			// handler.rejectedExecution(command, this);
-		}
-	
-		private boolean enqueue(Runnable command) {
-			return queue.add(command);
-		}
-	
-		private int getCurSize() {
-			mainLock.lock();
-			try {
-				return workers.size();
-			} finally {
-				mainLock.unlock();
-			}
-		}
-	
-		@Override
-		public void shutdown() {
-			for (CustomWorker worker : workers) {
-				worker.interrupt();
-			}
-		}
-	}
+lock
+public void lock()
+获取锁。
+如果该锁没有被另一个线程保持，则获取该锁并立即返回，将锁的保持计数设置为 1。
+如果当前线程已经保持该锁，则将保持计数加 1，并且该方法立即返回。
+如果该锁被另一个线程保持，则出于线程调度的目的，禁用当前线程，并且在获得锁之前，该线程将一
+直处于休眠状态，此时锁保持计数被设置为 1。
 
 
-# 面试题 #
-1."3个线程循环输出ADC"?
-a.通过Object对象实现
 
-	public class ABCDemo {
-		public static void test() {
-			Object lockA = new Object();
-			Object lockB = new Object();
-			Object lockC = new Object();
-	
-			Thread thA = new Thread(new Runnable() {
-				@Override
-				public void run() {
-					for (int i = 0; i < 10; i++) {
-						try {
-							System.out.println("A线程获取C锁");
-							synchronized (lockC) {
-								System.out.println("A线程开始等待C锁信号");
-								lockC.wait();
-								System.out.println("A线程结束等待C锁信号");
-							}
-							System.out.println("A线程释放C锁");
-							
-							System.out.println("A");
-							
-							System.out.println("A线程获取A锁");
-							synchronized (lockA) {
-								System.out.println("A线程开始发送A锁信号");
-								lockA.notify();
-								System.out.println("A线程结束发送A锁信号");
-							}
-							System.out.println("A线程释放A锁");
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-	
-					}
-				}
-			});
-	
-			Thread thB = new Thread(new Runnable() {
-				@Override
-				public void run() {
-					for (int i = 0; i < 10; i++) {
-						try {
-							System.out.println("B线程获取A锁");
-							synchronized (lockA) {
-								System.out.println("B线程开始等待A锁信号");
-								lockA.wait();
-								System.out.println("B线程结束等待A锁信号");
-							}
-							System.out.println("B线程释放A锁");
-							
-							System.out.println("B");
-							
-							System.out.println("B线程获取B锁");
-							synchronized (lockB) {
-								System.out.println("B线程开始发送B锁信号");
-								lockB.notify();
-								System.out.println("B线程结束发送B锁信号");
-							}
-							System.out.println("B线程释放B锁");
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-	
-					}
-				}
-			});
-	
-			Thread thC = new Thread(new Runnable() {
-				@Override
-				public void run() {
-					for (int i = 0; i < 10; i++) {
-						try {
-							System.out.println("C线程获取B锁");
-							synchronized (lockB) {
-								System.out.println("C线程开始等待B锁信号");
-								lockB.wait();
-								System.out.println("C线程结束等待B锁信号");
-							}
-							System.out.println("C线程释放B锁");
-							
-							System.out.println("C");
-							
-							System.out.println("C线程获取C锁");
-							synchronized (lockC) {
-								System.out.println("C线程开始发送C锁信号");
-								lockC.notify();
-								System.out.println("C线程结束发送C锁信号");
-							}
-							System.out.println("C线程释放C锁");
-	
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-	
-					}
-				}
-			});
-	
-			System.out.println("主线程开启A线程");
-			thA.start();
-			System.out.println("主线程开启B线程");
-			thB.start();
-			System.out.println("主线程开启C线程");
-			thC.start();
-			
-			System.out.println("主线程获取C锁");
-			synchronized (lockC) {
-				System.out.println("主线程开始发送C锁信号");
-				lockC.notify();
-				System.out.println("主线程结束发送C锁信号");
-			}
-			System.out.println("主线程释放C锁");
-		}
-	}
+lockInterruptibly
+public void lockInterruptibly() throws InterruptedException
+1）如果当前线程未被中断，则获取锁。 
+2）如果该锁没有被另一个线程保持，则获取该锁并立即返回，将锁的保持计数设置为 1。 
+3）如果当前线程已经保持此锁，则将保持计数加 1，并且该方法立即返回。 
+4）如果锁被另一个线程保持，则出于线程调度目的，禁用当前线程，并且在发生以下两种情况之一以
+前，该线程将一直处于休眠状态： 
+     1）锁由当前线程获得；或者 
+     2）其他某个线程中断当前线程。 
+5）如果当前线程获得该锁，则将锁保持计数设置为 1。 
+   如果当前线程： 
+       1）在进入此方法时已经设置了该线程的中断状态；或者 
+       2）在等待获取锁的同时被中断。 
+   则抛出 InterruptedException，并且清除当前线程的已中断状态。
 
-**b.通过ReentrantLock实现**（在ReentrantLock一章实现）
 
-**参考资料**
-1. 方腾飞. Java并发编程的艺术[M]. 上海:机械工业出版社, 2017.
-2. [推荐博文--Java并发编程：线程池的使用 ](https://www.cnblogs.com/dolphin0520/p/3932921.html)
+tryLock    public boolean tryLock()
+
+仅在调用时锁未被另一个线程保持的情况下，才获取该锁。 
+
+1）如果该锁没有被另一个线程保持，并且立即返回 true 值，则将锁的保持计数设置为 1。
+即使已将此锁设置为使用公平排序策略，但是调用 tryLock() 仍将 立即获取锁（如果有可用的），
+而不管其他线程当前是否正在等待该锁。在某些情况下，此“闯入”行为可能很有用，即使它会打破公
+平性也如此。如果希望遵守此锁的公平设置，则使用 tryLock(0, TimeUnit.SECONDS) 
+，它几乎是等效的（也检测中断）。 
+
+2）如果当前线程已经保持此锁，则将保持计数加 1，该方法将返回 true。 
+
+3）如果锁被另一个线程保持，则此方法将立即返回 false 值。 
+
+指定者：
+   接口 Lock 中的  tryLock
+返回： 
+   如果锁是自由的并且被当前线程获取，或者当前线程已经保持该锁，则返回 true；否则返回 
+false
+
+
+关于中断又是一段很长的叙述，先不谈。
+1）lock(), 拿不到lock就不罢休，不然线程就一直block。 比较无赖的做法。
+2）tryLock()，马上返回，拿到lock就返回true，不然返回false。 比较潇洒的做法。    带时间限制的tryLock()，拿不到lock，就等一段时间，超时返回false。比较聪明的做法。
+3）lockInterruptibly()就稍微难理解一些。
+
+抛弃实现上的区别 先从需求上说 首先 synchronized关键字没办法中断申请独占前的阻塞JDK5新追加的JUC解决了这个问题(当然不是只解决这一个问题) lock -> 调用后一直阻塞到获得锁tryLock -> 尝试是否能获得锁 如果不能获得立即返回lockInterruptibly -> 调用后一直阻塞到获得锁 但是接受中断信号(题主用过Thread#sleep吧)
+
+lock ： 在锁上等待，直到获取锁；
+tryLock：立即返回，获得锁返回true,没获得锁返回false；
+tryInterruptibly：在锁上等待，直到获取锁，但是会响应中断，这个方法优先考虑响应中断，而不是响应锁的普通获取或重入获取。 
+
+
+Java关键字transient和volatile
+http://blog.csdn.net/itismelzp/article/details/50539550
+
+transient
+词义：短暂的
+首先说说“序列化”，把一个对象的表示转化为字节流的过程称为串行化（也称为序列化，serialization），从字节流中把对象重建出来称为反串行化（也称为为反序列化，deserialization）。transient 为不应被串行化的数据提供了一个语言级的标记数据方法。
+transient是类型修饰符，只能用来修饰字段。在对象序列化的过程中，标记为transient的变量不会被序列化。
+[java] view plain copy
+class Test {  
+    transient int a; // 不会被持久化  
+    int b; // 持久化  
+}  
+
+当类Test的实例对象被序列化（比如将Test类的实例对象 t 写入硬盘的文本文件t.txt中），变量 a 的内容不会被保存，变量 b 的内容则会被保存。
+
+
+volatile
+词义：易变的
+volatile也是变量修饰符，只能用来修饰变量。volatile修饰的成员变量在每次被线程访问时，都强迫从共享内存中重读该成员变量的值。而且，当成员变量发生变化时，强迫线程将变化值回写到共享内存。这样在任何时刻，两个不同的线程总是看到某个成员变量的同一个值。
+在此解释一下Java的内存机制：
+Java使用一个主内存来保存变量当前值，而每个线程则有其独立的工作内存。线程访问变量的时候会将变量的值拷贝到自己的工作内存中，这样，当线程对自己工作内存中的变量进行操作之后，就造成了工作内存中的变量拷贝的值与主内存中的变量值不同。
+Java语言规范中指出：为了获得最佳速度，允许线程保存共享成员变量的私有拷贝，而且只当线程进入或者离开同步代码块时才与共享成员变量的原始值对比。
+这样当多个线程同时与某个对象交互时，就必须要注意到要让线程及时的得到共享成员变量的变化。
+而volatile关键字就是提示VM：对于这个成员变量不能保存它的私有拷贝，而应直接与共享成员变量交互。
+
+
+对于volatile类型的变量，系统每次用到他的时候都是直接从对应的内存当中提取，而不会利用cache当中的原有数值，以适应它的未知何时会发生的变化，系统对这种变量的处理不会做优化——显然也是因为它的数值随时都可能变化的情况。
+
+
+
+
+
+AtomicReference和AtomicInteger非常类似，不同之处就在于AtomicInteger是对整数的封装，而AtomicReference则对应普通的对象引用。也就是它可以保证你在修改对象引用时的线程安全性。在介绍AtomicReference的同时，我希望同时提出一个有关原子操作的逻辑上的不足。
+
+   之前我们说过，线程判断被修改对象是否可以正确写入的条件是对象的当前值和期望是否一致。这个逻辑从一般意义上来说是正确的。但有可能出现一个小小的例外，就是当你获得对象当前数据后，在准备修改为新值前，对象的值被其他线程连续修改了2次，而经过这2次修改后，对象的值又恢复为旧值。这样，当前线程就无法正确判断这个对象究竟是否被修改过。如图4.2所示，显示了这种情况。
+
+
+
+图4.2 对象值被反复修改回原数据
+
+   一般来说，发生这种情况的概率很小。而且即使发生了，可能也不是什么大问题。比如，我们只是简单得要做一个数值加法，即使在我取得期望值后，这个数字被不断的修改，只要它最终改回了我的期望值，我的加法计算就不会出错。也就是说，当你修改的对象没有过程的状态信息，所有的信息都只保存于对象的数值本身。
+
+    但是，在现实中，还可能存在另外一种场景。就是我们是否能修改对象的值，不仅取决于当前值，还和对象的过程变化有关，这时，AtomicReference就无能为力了。
+
+打一个比方，如果有一家蛋糕店，为了挽留客户，绝对为贵宾卡里余额小于20元的客户一次性赠送20元，刺激消费者充值和消费。但条件是，每一位客户只能被赠送一次。
+
+现在，我们就来模拟这个场景，为了演示AtomicReference，我在这里使用AtomicReference实现这个功能。首先，我们模拟用户账户余额。
+
+定义用户账户余额： 
+
+1
+2
+3
+static AtomicReference<Integer> money=newAtomicReference<Integer>();
+// 设置账户初始值小于20，显然这是一个需要被充值的账户
+money.set(19);
+　　
+
+接着，我们需要若干个后台线程，它们不断扫描数据，并为满足条件的客户充值。
+
+01 //模拟多个线程同时更新后台数据库，为用户充值
+02 for(int i = 0 ; i < 3 ; i++) {            
+03     new Thread(){
+04         publicvoid run() {
+05            while(true){
+06                while(true){
+07                    Integer m=money.get();
+08                    if(m<20){
+09                        if(money.compareAndSet(m, m+20)){
+10                  System.out.println("余额小于20元，充值成功，余额:"+money.get()+"元");
+11                             break;
+12                        }
+13                    }else{
+14                        //System.out.println("余额大于20元，无需充值");
+15                         break ;
+16                    }
+17                 }
+18             }
+19         }
+20     }.start();
+21 }
+　　
+
+上述代码第8行，判断用户余额并给予赠予金额。如果已经被其他用户处理，那么当前线程就会失败。因此，可以确保用户只会被充值一次。
+
+ 此时，如果很不幸的，用户正好正在进行消费，就在赠予金额到账的同时，他进行了一次消费，使得总金额又小于20元，并且正好累计消费了20元。使得消费、赠予后的金额等于消费前、赠予前的金额。这时，后台的赠予进程就会误以为这个账户还没有赠予，所以，存在被多次赠予的可能。下面，模拟了这个消费线程：
+
+ 
+
+21
+01 //用户消费线程，模拟消费行为
+02 new Thread() {
+03     public voidrun() {
+04         for(inti=0;i<100;i++){
+05            while(true){
+06                Integer m=money.get();
+07                 if(m>10){
+08                    System.out.println("大于10元");
+09                    if(money.compareAndSet(m, m-10)){
+10                        System.out.println("成功消费10元，余额:"+money.get());
+11                        break;
+12                    }
+13                }else{
+14                    System.out.println("没有足够的金额");
+15                    break;
+16                 }
+17             }
+18             try{Thread.sleep(100);} catch (InterruptedException e) {}
+19         }
+20     }
+21 }.start();
+　　上述代码中，消费者只要贵宾卡里的钱大于10元，就会立即进行一次10元的消费。执行上述程序，得到的输出如下：
+
+  
+
+余额小于20元，充值成功，余额:39元
+大于10元
+成功消费10元，余额:29
+大于10元
+成功消费10元，余额:19
+余额小于20元，充值成功，余额:39元
+大于10元
+成功消费10元，余额:29
+大于10元
+成功消费10元，余额:39
+余额小于20元，充值成功，余额:39元
+
+   从这一段输出中，可以看到，这个账户被先后反复多次充值。其原因正是因为账户余额被反复修改，修改后的值等于原有的数值。使得CAS操作无法正确判断当前数据状态。
+
+ 
+
+   虽然说这种情况出现的概率不大，但是依然是有可能的出现的。因此，当业务上确实可能出现这种情况时，我们也必须多加防范。体贴的JDK也已经为我们考虑到了这种情况，**使用AtomicStampedReference就可以很好的解决这个问题**。
