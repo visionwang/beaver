@@ -1,7 +1,5 @@
 
-static
-
-　　以下是本文目录大纲：
+ThreadLocal是一个非常简单的
 
 　　一.对ThreadLocal的理解
 
@@ -151,3 +149,5 @@ static
 	                clientCatTransaction.endTransaction();
 	        }
 	    }
+
+

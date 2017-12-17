@@ -1,234 +1,217 @@
-首先要解释一下什么是延迟加载，延迟加载就是等到真真使用的时候才去创建实例，不用时不要去创建。
- 
-**从速度和反应时间角度来讲，非延迟加载（又称饿汉式）好；从资源利用效率上说，延迟加载（又称懒汉式）好。**
- 
-下面看看几种常见的单例的设计方式：
- 
-第一种：**非延迟加载单例类**
+由单例模式引发的血案
 
-	public class Singleton {  
-	 private Singleton() {}  
-	 private static final Singleton instance = new Singleton();  
-	 public static Singleton getInstance() {  
-	  return instance;  
-	 }  
-	}  
- 
-第二种：**同步延迟加载**
+最近去平安系面试时，遇到了个人技术领域认定的一大偶像吴大师（Cat作者），他随口问了个单例的问题，要求基于Java技术栈，给出**几种单例的方案，并给出单元测试代码，最后要求谈谈单例模式最需要注意的问题时什么**？我想想挺简单的，就是一个恶汉，一个懒汉模式，单元测试就一个判断NULL和2个Instance的比较就好。结果被大师劈头盖脸一顿数落，比如我写的懒汉单例（双锁），为什么使用volatile？还有别的更好的方式么？单元测试你不起多个线程，简单的比较有任何意义么？最后被定位为写代码不懂脑筋，仅仅就是照抄别人的成熟方案，缺少对问题关键的把握，无法进行变通。
+说实话当时还有些抵触情绪，即使是被自己的偶像批评，不过回家之后好好回顾了相关的问题，发现自己对Java技术栈的理解仍然很浅薄，痛定思痛，决定好好来学习下单例模式和内部类，本文就是基于这两个问题总结，此外，祝大家新的一周工作愉快。
 
-	public class Singleton {  
-	 private static Singleton instance = null;  
-	 private Singleton() {}  
-	 public static synchronized Singleton getInstance() {  
-	  if (instance == null) {  
-	   instance = new Singleton();  
-	  }  
-	  return instance;  
-	 }  
-	}  
+#单例模式
+在详细介绍单例模式前，首先来谈谈**单例模式的目的和问题**，尤其是问题部分，我们常常容易忽视（感谢身边同事的提醒）。单例模式的目的非常明确，就是在当前应用中只保存指定对象的一个实例，主要目的是减少资源的消耗，各种提供服务的类会选用该模式。单例模式主要有**资源消耗的取舍，线程安全和如何防止反射或序列化破坏单例等**三个问题。主要单例的实现模式包括**最简单有效的饿汉式、最多变的懒汉式、最优的静态内部类方式**、奇特的枚举类方式和综合的登记式模式，本文主要介绍前3种，也是个人认为比较最有价值的3种。
 
-第三种：**双重检测同步延迟加载** 
-为处理原版非延迟加载方式瓶颈问题，我们需要对 instance 进行第二次检查，目的是避开过多的同步（因为这里的同步只需在第一次创建实例时才同步，一旦创建成功，以后获取实例时就不需要同获取锁了），但在Java中行不通，因为同步块外面的if (instance == null)可能看到已存在，但不完整的实例。JDK5.0以后版本若instance为**volatile**则可行：
+**饿汉式**
+对于一般的业务开发来说饿汉式已经足够，而且Spring框架的单例默认就是饿汉模式，绝大部分的提供各类服务的类都不是很占有内存空间，以此在项目启动时进行预加载对于系统影响不大，即使始终不被使用也没有太大的关系，其代码如下（**解决了反射和序列化破坏单例的问题**）。
 
+	public class HungrySingleton  implements Serializable
+	{
+	    private HungrySingleton(){
+	        if(null != instance){//防止反射破坏单例，场景为二方库调用者强行破坏单例
+	            throw new IllegalOperationException();
+	        }
+	    }
+	    public  static final HungrySingleton instance = new HungrySingleton();
+	    public static HungrySingleton getInstance(){
+	        return instance;
+	    }
+		// 防止反序列化获取多个对象，Java这儿比较奇特，因为在Serializable
+		private Object readResolve() throws ObjectStreamException {
+		    return instance;
+		}
+	}
+		
+	public class HungrySingletonTest {
+	    @Test
+	    public void testGetInstance() throws Exception {
+	        Class<HungrySingleton> clazz = HungrySingleton.class;
+	        Constructor<?> ctor = clazz.getDeclaredConstructor(null);
+	        ctor.setAccessible(true);
+	        HungrySingleton first = HungrySingleton.getInstance();
+	        HungrySingleton second = (HungrySingleton)ctor.newInstance(null);//破坏单例失败
+	    }
+	}
 
-	public class Singleton {  
-	 private volatile static Singleton instance = null;  
-	 private Singleton() {}  
-	 public static Singleton getInstance() {  
-	  if (instance == null) {  
-	   synchronized (Singleton.class) {// 1  
-	    if (instance == null) {// 2  
-	     instance = new Singleton();// 3  
-	    }  
-	   }  
-	  }  
-	  return instance;  
-	 }  
-	}  
-
-双重检测锁定失败的问题并不归咎于 JVM 中的实现 bug，而是归咎于 Java 平台内存模型。**内存模型允许所谓的“无序写入”，这也是失败的一个主要原因。**
-
-
-无序写入：
-为解释该问题，需要重新考察上述清单中的 //3 行。此行代码创建了一个 Singleton 对象并初始化变量 instance 来引用此对象。这行代码的问题是：在 Singleton 构造函数体执行之前，变量 instance 可能成为非 null 的，即赋值语句在对象实例化之前调用，此时别的线程得到的是一个还会初始化的对象，这样会导致系统崩溃。
-什么？这一说法可能让您始料未及，但事实确实如此。在解释这个现象如何发生前，请先暂时接受这一事实，我们先来考察一下双重检查锁定是如何被破坏的。假设代码执行以下事件序列：
-
-1、线程 1 进入 getInstance() 方法。
-2、由于 instance 为 null，线程 1 在 //1 处进入 synchronized 块。 
-3、线程 1 前进到 //3 处，但在构造函数执行之前，使实例成为非 null。 
-4、线程 1 被线程 2 预占。
-5、线程 2 检查实例是否为 null。因为实例不为 null，线程 2 将 instance 引用返回给一个构造完整但部分初始化了的 Singleton 对象。 
-6、线程 2 被线程 1 预占。
-7、线程 1 通过运行 Singleton 对象的构造函数并将引用返回给它，来完成对该对象的初始化。
- 
-为展示此事件的发生情况，假设代码行 instance =new Singleton(); 执行了下列伪代码：
-mem = allocate();             //为单例对象分配内存空间.
-instance = mem;               //注意，instance 引用现在是非空，但还未初始化
-ctorSingleton(instance);    //为单例对象通过instance调用构造函数
-
-这段伪代码不仅是可能的，而且是一些 JIT 编译器上真实发生的。执行的顺序是颠倒的，但鉴于当前的内存模型，这也是允许发生的。JIT 编译器的这一行为使双重检查锁定的问题只不过是一次学术实践而已。
- 
- 
-如果真像这篇文章：http://dev.csdn.net/author/axman/4c46d233b388419e9d8b025a3c507b17.html所说那样的话，1.2或以后的版本就不会有问题了，但这个规则是JMM的规范吗？谁能够确认一下。
-确实,在JAVA2(以jdk1.2开始)以前对于实例字段是直接在主储区读写的.所以当一个线程对resource进行分配空间,
-初始化和调用构造方法时,可能在其它线程中分配空间动作可见了,而初始化和调用构造方法还没有完成.
-但是从JAVA2以后,JMM发生了根本的改变,分配空间,初始化,调用构造方法只会在线程的工作存储区完成,在没有
-向主存储区复制赋值时,其它线程绝对不可能见到这个过程.而这个字段复制到主存区的过程,更不会有分配空间后
-没有初始化或没有调用构造方法的可能.在JAVA中,一切都是按引用的值复制的.向主存储区同步其实就是把线程工作
-存储区的这个已经构造好的对象有压缩堆地址值COPY给主存储区的那个变量.这个过程对于其它线程,要么是resource
-为null,要么是完整的对象.绝对不会把一个已经分配空间却没有构造好的对象让其它线程可见.
- 
-另一篇详细分析文章：http://www.iteye.com/topic/260515
- 
-第四种：使用ThreadLocal修复双重检测
- 
-借助于ThreadLocal，将临界资源（需要同步的资源）线程局部化，具体到本例就是将双重检测的第一层检测条件 if (instance == null) 转换为了线程局部范围内来作。这里的ThreadLocal也只是用作标示而已，用来标示每个线程是否已访问过，如果访问过，则不再需要走同步块，这样就提高了一定的效率。但是ThreadLocal在1.4以前的版本都较慢，但这与volatile相比却是安全的。
- 
-
-	public class Singleton {  
-	 private static final ThreadLocal perThreadInstance = new ThreadLocal();  
-	 private static Singleton singleton ;  
-	 private Singleton() {}  
-	   
-	 public static Singleton  getInstance() {  
-	  if (perThreadInstance.get() == null){  
-	   // 每个线程第一次都会调用  
-	   createInstance();  
-	  }  
-	  return singleton;  
-	 }  
-	  
-	 private static  final void createInstance() {  
-	  synchronized (Singleton.class) {  
-	   if (singleton == null){  
-	    singleton = new Singleton();  
-	   }  
-	  }  
-	  perThreadInstance.set(perThreadInstance);  
-	 }  
-	}  
-
-**第五种：使用内部类实现延迟加载**(静态内部类)
-为了做到真真的延迟加载，双重检测在Java中是行不通的，所以只能借助于另一类的类加载加延迟加载：
-
-	public class Singleton {  
-	 private Singleton() {}  
-	 public static class Holder {  
-	  // 这里的私有没有什么意义  
-	  /* private */static Singleton instance = new Singleton();  
-	 }  
-	 public static Singleton getInstance() {  
-	  // 外围类能直接访问内部类（不管是否是静态的）的私有变量  
-	  return Holder.instance;  
-	 }  
-	}  
- 
-单例测试
-下面是测试单例的框架，采用了类加载器与反射。
-注，为了测试单便是否为真真的单例，我自己写了一个类加载器，且其父加载器设置为根加载器，这样确保Singleton由MyClassLoader加载，如果不设置为根加载器为父加载器，则默认为系统加载器，则Singleton会由系统加载器去加载，但这样我们无法卸载类加载器，如果加载Singleton的类加载器卸载不掉的话，那么第二次就不能重新加载Singleton的Class了，这样Class不能得加载则最终导致Singleton类中的静态变量重新初始化，这样就无法测试了。
-下面测试类延迟加载的结果是可行的，同样也可用于其他单例的测试：
+**懒汉式**
+懒汉式单例是考点最多的一个，虽然现实中使用次数不是很多，但掌握它有利于了解Java并发编程，常见的实现方式包括**加同步锁的懒汉式和防止指令重排优化的懒汉式**。
+	
+	//加同步锁的懒汉式，比较简单，但每次获取实例时都需要获得锁，对性能有一定影响
+	public static synchronized LazySingleton01 getInstance(){
+	    if(instance == null){
+	        instance = new LazySingleton01();
+	    }
+	    return instance;
+	}
+	
+	//防止指令重排优化的懒汉式
+	//对常见的双锁进行了优化，对instance使用volatile修饰
+	//再JAVA中，同步块外的判空操作有可能看到已存在，但不完整的实例.
+	//如果使用不完整的实例则会造成系统崩溃，造成该问题的原因是由于Java内存模型的重排序机制。
+	public  static volatile LazySingleton02 instance = null;
+	public static LazySingleton02 getInstance(){
+	    if(null  == instance){
+	        synchronized (LazySingleton02.class) {
+	            if(null == instance){
+	                instance  = new LazySingleton02();
+	            }
+	        }
+	    }
+	    return instance;
+	}
+	
+	//单测时一定要注意，需要使用多个线程进行测试，不然就失去了意义
+	public class LazySingleton02Test {
+	    @Test
+	    public void getInstance() throws  InterruptedException, ExecutionException{
+	        ExecutorService threadPool = Executors.newFixedThreadPool(2);
+	        Future<LazySingleton02> futureA = threadPool.submit(
+	                new Callable<LazySingleton02>() {
+	                    @Override
+	                    public LazySingleton02 call() {
+	                        return LazySingleton02.getInstance();
+	                    }
+	                }
+	        );
+	        Future<LazySingleton02> futureB = threadPool.submit(
+	                new Callable<LazySingleton02>() {
+	                    @Override
+	                    public LazySingleton02 call() {
+	                        return LazySingleton02.getInstance();
+	                    }
+	                }
+	        );
+	        Assert.assertNotNull(futureA.get());
+	        Assert.assertNotNull(futureB.get());
+	        Assert.assertTrue(futureA.get().equals(futureB.get()));
+	    }
+	}
 
 
-	public class Singleton {  
-	 private Singleton() {}  
-	  
-	 public static class Holder {  
-	  // 这里的私有没有什么意义  
-	  /* private */static Singleton instance = new Singleton();  
-	 }  
-	  
-	 public static Singleton getInstance() {  
-	  // 外围类能直接访问内部类（不管是否是静态的）的私有变量  
-	  return Holder.instance;  
-	 }  
-	}  
-  
-class CreateThread extends Thread {  
- Object singleton;  
- ClassLoader cl;  
-  
- public CreateThread(ClassLoader cl) {  
-  this.cl = cl;  
- }  
-  
- public void run() {  
-  Class c;  
-  try {  
-   c = cl.loadClass("Singleton");  
-   // 当两个不同命名空间内的类相互不可见时，可采用反射机制来访问对方实例的属性和方法  
-   Method m = c.getMethod("getInstance", new Class[] {});  
-   // 调用静态方法时，传递的第一个参数为class对象  
-   singleton = m.invoke(c, new Object[] {});  
-   c = null;  
-   cl = null;  
-  } catch (Exception e) {  
-   e.printStackTrace();  
-  }  
- }  
-}  
-  
-class MyClassLoader extends ClassLoader {  
- private String loadPath;  
- MyClassLoader(ClassLoader cl) {  
-  super(cl);  
- }  
- public void setPath(String path) {  
-  this.loadPath = path;  
- }  
- protected Class findClass(String className) throws ClassNotFoundException {  
-  FileInputStream fis = null;  
-  byte[] data = null;  
-  ByteArrayOutputStream baos = null;  
-  
-  try {  
-   fis = new FileInputStream(new File(loadPath  
-     + className.replaceAll("\\.", "\\\\") + ".class"));  
-   baos = new ByteArrayOutputStream();  
-   int tmpByte = 0;  
-   while ((tmpByte = fis.read()) != -1) {  
-    baos.write(tmpByte);  
-   }  
-   data = baos.toByteArray();  
-  } catch (IOException e) {  
-   throw new ClassNotFoundException("class is not found:" + className,  
-     e);  
-  } finally {  
-   try {  
-    if (fis != null) {  
-     fis.close();  
-    }  
-    if (fis != null) {  
-     baos.close();  
-    }  
-  
-   } catch (Exception e) {  
-    e.printStackTrace();  
-   }  
-  }  
-  return defineClass(className, data, 0, data.length);  
- }  
-}  
-  
-class SingleTest {  
- public static void main(String[] args) throws Exception {  
-  while (true) {  
-   // 不能让系统加载器直接或间接的成为父加载器  
-   MyClassLoader loader = new MyClassLoader(null);  
-   loader  
-     .setPath("D:\\HW\\XCALLC16B125SPC003_js\\uniportal\\service\\AAA\\bin\\");  
-   CreateThread ct1 = new CreateThread(loader);  
-   CreateThread ct2 = new CreateThread(loader);  
-   ct1.start();  
-   ct2.start();  
-   ct1.join();  
-   ct2.join();  
-   if (ct1.singleton != ct2.singleton) {  
-    System.out.println(ct1.singleton + " " + ct2.singleton);  
-   }  
-   // System.out.println(ct1.singleton + " " + ct2.singleton);  
-   ct1.singleton = null;  
-   ct2.singleton = null;  
-   Thread.yield();  
-  }  
- }  
-}  
+**静态内部类方式**
+静态内部类这种方式是个人最不熟悉的，之前又一次面试中还被问过一个**如何扩充类**的问题，即Java中不支持多继承，如果想要复用多个类的属性如何做到？相对于将属性提取到接口中或通过自合模式复用，内部类的方式会更加优雅。对于单例同样可以借助内部类的特性优雅的处理，代码如下所示，注意看关于内部类加载的注释。
+
+	public class LazySingleton03 {
+	    private LazySingleton03(){}
+	    private  static class  LazyHolder{
+	            private  static final LazySingleton03 INSTANCE = new LazySingleton03();
+	        }
+	        //借助了静态内部类的特性，其要被引用后才会装载到内存
+	        //通常的理解是，只要是当前jar中的静态属性或方法都会被加载到内存，但静态内部类却不是，它只有在第一次调用getInstance方法，产生了LazyHolder的引用，才会被真正加载。
+	        //实际上也是懒加载。
+	        public static final LazySingleton03 getInstance(){
+	            return LazyHolder.INSTANCE;
+	    }
+	}
+	
+此外，枚举类型的单例借助其特性默认就是线程安全和防止反射破坏等行为，但并不是很适合大范围的使用。而登记器的方式实际上就是做一个Mapper其中存放所有的单例对象，需要时去获取即可，因此最推荐的仍然是**内部类**方式。
+
+**Tip**
+**重排序**
+对于`instance  = new LazySingleton02()`，其实际执行情况伪代码可能如下，可以看到Java内存模型分配内存并创建对象的方式和我们预想的不太一样，这部分会在Java并发编程系列文章中继续加强学习。
+
+	memory = allocate();//分配内存空间，C语言中应该很熟悉
+	instance = memory;//这时instance会变成非空，但还未初始化
+	ctor(instance);//初始化对象
+	
+**`synchronized`关键字**
+通常基于不同的维度有如下几种用法，锁定范围越来越小，尽可能选择更小粒度的锁定范围可以获得更好的性能。
+给类加锁：`synchronized(XXXX.class)`
+给对象加锁：`synchronized(this)`, `public synchronized void test(){}`
+给代码块加锁：`synchronized(lock){ ... }`
+
+**Tip**
+**单例模式的类和提供方法的静态类有什么区别？**提供方法的静态类不是面向对象的思想的产物，相应的其没有封装、继承、多态等特性，简单来说你无法对提供方法的静态类进行扩展。
+
+#内部类
+之前通过静态内部类方式实现单例引入了内部类这一重要概念，接下来将详细介绍内部类的相关概念和用法。**如果在一个类的内部定义一个新的类型，就将这个新的类型称为内部类**，其名称无需和文件名一致。特别的，内部类是一个编译时概念，一旦编译成功，就会成为完全不同的两个类，比如`Outer.class`和`Outer$Inner.class`。通常来说，内部类包括**静态内部类、匿名内部类**、成员内部类和局部内部类，重要性依次递减。
+
+**静态内部类与成员内部类**
+个人认为**静态内部类**最重要的一种内部类，比如常见的`ReentrantLock`中的`Sync`，`NonfairSync`、`FairSync`等一系列静态内部类。其通过`static`修饰，可以包含static数据和属性，且其无需创建外部类和内部类即可被使用。
+**成员内部类**是最基本的一种内部类类型，其可以访问外部类的所有成员和方法，但不能含有static的变量和方法，因为成员内部类需要先创建外部类，之后才能创建自己，特别的，其可以通过`外部类.this.属性`的方式访问外部类同名属性，示例如下所示。
+
+	public class InnerClass {
+	    private static String staticName = "xionger";
+	    private String objectName = "xiongda";
+	
+	    public static final class InnerClass01 {//静态内部类
+	        private statißßc String name = InnerClassInterface.class.getName();
+	        public static String getName() {
+	            return InnerClass.staticName + "--" + name;
+	        }
+	    }
+	    public class InnerClass02 {//成员内部类
+	        public String getName() {
+	            return InnerClass.this.objectName;//注意这儿获取外部类属性的形式
+	        }
+	    }
+	}
+
+**匿名内部类**
+匿名内部类经常会被使用，比如使用线程、事件等场景，示例代码如下所示。
+
+	public class AnonymousInnerClass {
+	    public void createThread(){
+	        Thread thd = new Thread(new Runnable() {
+	            @Override
+	            public void run() {
+	                System.out.println(AnonymousInnerClass.class.getName());
+	            }
+	        });
+	    }
+	    //注意方法参数上的final关键字，由于内部类编译时生成单独的.class文件，内部类与外部类不在同一文件。
+	    //内部类是通过将传入的参数先通过构造器复制到自己内部再被使用的，因此为了保持数据的一致需要添加final。
+		public InnerClassInterface getInnerClass(final String prefixName){
+		        return new InnerClassInterface(){
+		            @Override
+		            public String getName() {
+		                return prefixName + "--suffixName";
+		            }
+		        };
+		    }
+		}
+		
+		interface InnerClassInterface {
+		   String getName();
+		}
+
+**局部内部类**的使用场景实在太少就不做介绍了。
+
+#类加载器
+**类加载器的分类**
+类加载器包括以下4种，加载顺序按照序号从小到大。
+1.Bootstrap ClassLoader启动类加载器，负责加载`jre/lib/rt.jar`。
+2.Extension ClassLoader扩展类加载器，负责加载扩展功能Jar包，包括`jre/lib/*.jar`或`ext目录`下的jar包。
+3.App ClassLoader应用类加载器,负责加载classpath中指定的jar包.
+4.Custom ClassLoader自定义类加载器，如tomcat根据j2ee规范自行实现ClassLoader。
+
+**类的加载过程**
+Java加载类的过程主要包含如下3步。
+a.**加载**：查找并加载类的二进制文件。
+b.**链接**（包含3个子步骤）：**验证**，确保加载类的正确性，防止恶意代码；**准备**，为类的静态变量分配内存空间并赋默认值；**解析**，将类的符号引用转化为直接引用。
+c.**初始化**：为类的静态变量赋予初始值。
+**Tip**
+**类初始化的条件**
+1.创建类的实例，new对象或者反射创建对象。
+2.访问类或接口的静态变量时或静态方法时。
+3.初始化一个类的子类时会先初始化父类。
+4.JVM启动时明确指定的启动类。
+类加载器这部分的水很深，会在之后的文章专门用一篇文章进行解析，之后一段时间，将主要进行工作2年多来项目的回顾总结。
+
+**参考资料**
+推荐：海子大神的JAVA技术栈相关文章：http://www.cnblogs.com/dolphin0520/
+[单例模式，你知道的和你所不一定知道的一切](http://blog.csdn.net/u011546655/article/details/50134057)
+[如何防止JAVA反射对单例类的攻击？](https://www.cnblogs.com/lthIU/p/6240128.html)
+[Java设计模式（一）：单例模式，防止反射和反序列化漏洞](http://blog.csdn.net/hardwin/article/details/51477359)
+[java 单例模式通过内部静态类的方式？](https://www.zhihu.com/question/35454510)
+[java 内部类如何访问外部类的同名属性](http://blog.csdn.net/u013655410/article/details/38040223)
+[Java内部类的使用小结](http://blog.51cto.com/android/384844)
+[Java类加载器总结](http://blog.csdn.net/gjanyanlig/article/details/6818655/)
+[类加载原理分析&动态加载Jar/Dex](http://www.jianshu.com/p/0b1dba1a1e95)
+[Java高新技术第一篇：类加载器详解](http://blog.csdn.net/jiangwei0910410003/article/details/17733153)
+
+
