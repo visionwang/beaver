@@ -1,0 +1,1 @@
+alter table `ttdorderitemdetail` add `IDNumber` varchar(50) null default null  comment '证件号码' after `IDType`
