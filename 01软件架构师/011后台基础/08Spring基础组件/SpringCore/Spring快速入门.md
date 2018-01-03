@@ -13,9 +13,6 @@ spring singleton设置为懒汉模式:
 调用getBean时,就new一个新实例
 默认单例（饿汉）：
 
-
-
-
 Spring-context -> spring-beans
 
 

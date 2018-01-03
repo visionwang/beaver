@@ -16,7 +16,7 @@ MD文档工具: MacDown免费很方便，就是换行要空2格。在偏好设�
 [OmniGraffle](https://bbs.feng.com/forum.php?mod=viewthread&tid=10739827)，木有那么好用
 Confluence中很好的集成了画图功能（plantuml, graphviz, draw.io）
 [Draw.io](https://www.draw.io/), <mark>最推荐</mark>，没有之一，和plantUML组合使用。 
-思维导图工具：Xmind
+思维导图工具：Xmind，其在MacOS下并不好用。
 IDE： [idea](https://www.jetbrains.com/idea/), 与git完美集成
 简易代码编辑器： [VSCode](https://code.visualstudio.com/)，与git完美集成
 Http抓包工具： Charles
@@ -49,7 +49,6 @@ Http请求工具：[Postma](https://www.getpostman.com/)n居然是一个独立�
 |  chrome |`Command + R` 刷新页面  |
 |   |`Command + Option + i` 开发者工具  |
 
-#常见设计
-修改hostname： 在共享中修改
-显示隐藏文件
-显示文扩展名
+#补充
+* MacOS中有一个很棒的包管理工具Homebrew，通过`/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"`安装，类似Linux系统下的yum,apt等，[Homebrew](https://brew.sh/)。
+
