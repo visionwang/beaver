@@ -30,6 +30,7 @@ GC分析工具：GC Log Viewer, Universal Garbage Collection Log Analyser
 ftp工具： FIlezilla
 代码管理： Git, GitHub, SourceTree(Atlassian公司好牛, JIRA软件项目管理, Conflunce, SourceTree)
 Http请求工具：[Postma](https://www.getpostman.com/)n居然是一个独立应用，NX，看看有木有比chrome的插件boomerang好用。
+Android传输工具：[Android File Transfer](https://www.android.com/filetransfer/)。
 
 #快捷键  
 |  类别  | 操作   | 
@@ -52,3 +53,4 @@ Http请求工具：[Postma](https://www.getpostman.com/)n居然是一个独立�
 #补充
 * MacOS中有一个很棒的包管理工具Homebrew，通过`/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"`安装，类似Linux系统下的yum,apt等，[Homebrew](https://brew.sh/)。
 
+首先回答问题：Mac 下没有和 Everything 一样的快速索引工具，在Mac上能够媲美Everything的工具还没出来。

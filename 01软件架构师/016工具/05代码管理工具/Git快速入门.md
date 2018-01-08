@@ -85,6 +85,15 @@ Git设置SSH
 	build/    # 忽略 build/ 目录下的所有文件
 	doc/*.txt # 会忽略 doc/notes.txt 但不包括 doc/server/arch.txt
 
+一个gitignore的问题： [.gitignore不生效问题](http://blog.csdn.net/qinyushuang/article/details/55210286)
+原因明白了，是那个文件已经被git管理，ignore无效。。需要delete
+在IDEA中，可以安装CVS插件
+
+idea 终端 git命令智能感知
+http://blog.csdn.net/qq_28867949/article/details/73012300
+查找git默认安装目录`which git`
+`/usr/bin/git-shell`
+
 
 **Tip**
 主要供自己工作参考，若有疏漏，望见谅。参考蒋鑫大师的《GIT权威指南》和大塚弘记的GitHub入门与实践，前者非常全面，后者简单有效。
