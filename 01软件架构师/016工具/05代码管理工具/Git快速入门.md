@@ -20,7 +20,7 @@
 |git命令|解释|
 |:--|:--|
 |git config --global  --list | 查看本地配置环境变量|
-|git config –global user.name | Git相关环境变量配置|
+|git config --global user.name | Git相关环境变量配置, user.email, --local|
 | git status| 查看当前状态|
 | git diff| |
 | git checkout <branch>| 切换到指定branch|
@@ -69,12 +69,7 @@ Git模型图如下所示
 ![](https://images2015.cnblogs.com/blog/636325/201606/636325-20160601080654149-971010202.png)
 
 Git设置SSH
-第一步：生成本机`ssh key, ssh-keygen -t rsa -C "xxxxxx@yy.com"`
-第二步：设置用户名密码
-`$ git config --global user.name “your_username”  #设置用户名`
-`$ git config --global user.email “your_registered_github_Email”  #设置邮箱地址`
-第三步：测试是否成功，`ssh -T git@github.com`
-对于git小乌龟来说：只需要在设置 -> git 编辑本地 `.git/config 增加[credential]helper = store即可`
+生成本机`ssh key, ssh-keygen -t rsa -C "xxxxxx@yy.com"`
 
 在git中如果想忽略掉某个文件，不让这个文件提交到版本库中，可以使用修改 .gitignore 文件的方法。这个文件每一行保存了一个匹配的规则例如：
 此为注释 – 将被 Git 忽略
@@ -84,6 +79,8 @@ Git设置SSH
 	/TODO     # 仅仅忽略项目根目录下的 TODO 文件，不包括 subdir/TODO
 	build/    # 忽略 build/ 目录下的所有文件
 	doc/*.txt # 会忽略 doc/notes.txt 但不包括 doc/server/arch.txt
+
+
 
 一个gitignore的问题： [.gitignore不生效问题](http://blog.csdn.net/qinyushuang/article/details/55210286)
 原因明白了，是那个文件已经被git管理，ignore无效。。需要delete

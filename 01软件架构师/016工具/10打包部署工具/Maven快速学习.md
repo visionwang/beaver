@@ -303,3 +303,24 @@ Tip: 对于community版本的Idea就需要借助maven命令来启动tomcat容器
 	        </plugins>
 	    </build>
 	</project>
+
+补充(想要把接口源码打包上传maven仓库的，可以在pom里加这个插件)
+
+	<build>
+		<plugins>
+			<!--源码-->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>3.0.1</version>
+				<executions>
+					<execution>
+						<phase>compile</phase>
+						<goals>
+							<goal>jar-no-fork</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>

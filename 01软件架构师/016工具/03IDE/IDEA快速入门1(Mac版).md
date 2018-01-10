@@ -45,12 +45,13 @@
 |Control + I 实现方法（实现接口中的方法）|
 |Command + Option + T 包围代码（使用if..else, try..catch, for, synchronized等包围选中的代码）|
 |Command + / 注释/取消注释与行注释|
-|Command + Option + / 注释/取消注释与块注释|
+|Ctrl + Shift + / 注释/取消注释与块注释|
 |Command + Option + L 格式化代码|
 |Control + Option + O 优化import|
 |Option + 方向键上 连续选中代码块|
 |Option + Delete 删除到单词的开头|
 |Shift + Enter 开始新的一行|
+|Command + Y 删除一行|
 |Command + Delete 删除当前行或选定的块的行|
 |**Search/Replace（查询/替换）**|
 |Double Shift 查询任何东西|
@@ -59,6 +60,19 @@
 |**Live Templates（动态代码模板）**|
 |Command + Option + J 弹出模板选择窗口，将选定的代码使用动态模板包住|
 |Command + J 插入自定义动态代码模板|
+|command+alt+B 可以导航到一个抽象方法的实现代码|
+|command+N 查找指定类名的类|
+|control+N generate生成方法或其他|
+
+https://www.cnblogs.com/pinganjiankang/p/6950684.html
+
+**通过Diagram查看类结构**
+在 IntelliJ IDEA 中这个查看一个类也就是当前类的所有继承关系，包括实现的所有的接口和继承的类，
+这个继承，不仅仅是一级的继承关系，包括好几层的继承。父类的父类的父类。直到最后。
+可以很清楚明了的了解一个类的实现关系。
+diagram 英[ˈdaɪəgræm] 美[ˈdaɪəˌɡræm]
+
+[windows版本参考](http://www.cnblogs.com/xiong2ge/p/idea_windows_fast.html)
 
 **参考资料**
 <mark>推荐极客学院的相关教程</mark>[IntelliJ IDEA使用教程](http://wiki.jikexueyuan.com/project/intellij-idea-tutorial/)
