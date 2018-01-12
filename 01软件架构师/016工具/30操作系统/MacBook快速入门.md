@@ -31,6 +31,11 @@ ftp工具： FIlezilla
 代码管理： Git, GitHub, SourceTree(Atlassian公司好牛, JIRA软件项目管理, Conflunce, SourceTree)
 Http请求工具：[Postma](https://www.getpostman.com/)n居然是一个独立应用，NX，看看有木有比chrome的插件boomerang好用。
 Android传输工具：[Android File Transfer](https://www.android.com/filetransfer/)。
+数据库UI：sequel-pro-1.1.2 for mysql
+
+Mac OS X系统
+数码测色计
+ColorSnapper
 
 #快捷键  
 |  类别  | 操作   | 

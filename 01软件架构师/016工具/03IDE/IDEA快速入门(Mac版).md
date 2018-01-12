@@ -37,32 +37,41 @@
 #快捷键
 |  Editing（编辑） |
 |:--|
-| Command + , 系统首选项|
+|Command + ,  系统首选项|
+|Command + Y 删除一行|
+|command+alt+B 可以导航到一个抽象方法的实现代码|
+|command+N 查找指定类名的类|
+|control+N generate生成方法或其他|
+|Command + Option + L 格式化代码|
+|Command + / 注释/取消注释与行注释|
+|Ctrl + Shift + / 注释/取消注释与块注释|
+|Command + Option + 左右 前进，后退，跳到之前处理页面|
+|Command + F 文件内查找|
+|Command + Shift + F 全局查找（根据路径）|
+|Command + R 替换|
+|Control + Option + O 优化import，alt+enter 导入包，自动修改|
+
 |Control + Space 基本的代码补全（补全任何类、方法、变量）|
 |Control + Shift + Space 智能代码补全（过滤器方法列表和变量的预期类型）|
 |Command + Shift + Enter 自动结束代码，行末自动添加分号|
 |Control + O 覆盖方法（重写父类方法）|
 |Control + I 实现方法（实现接口中的方法）|
 |Command + Option + T 包围代码（使用if..else, try..catch, for, synchronized等包围选中的代码）|
-|Command + / 注释/取消注释与行注释|
-|Ctrl + Shift + / 注释/取消注释与块注释|
-|Command + Option + L 格式化代码|
-|Control + Option + O 优化import|
+
+
+
 |Option + 方向键上 连续选中代码块|
 |Option + Delete 删除到单词的开头|
 |Shift + Enter 开始新的一行|
-|Command + Y 删除一行|
+
 |Command + Delete 删除当前行或选定的块的行|
 |**Search/Replace（查询/替换）**|
 |Double Shift 查询任何东西|
-|Command + F 文件内查找|
-|Command + Shift + F 全局查找（根据路径）|
+
 |**Live Templates（动态代码模板）**|
 |Command + Option + J 弹出模板选择窗口，将选定的代码使用动态模板包住|
 |Command + J 插入自定义动态代码模板|
-|command+alt+B 可以导航到一个抽象方法的实现代码|
-|command+N 查找指定类名的类|
-|control+N generate生成方法或其他|
+
 
 https://www.cnblogs.com/pinganjiankang/p/6950684.html
 
