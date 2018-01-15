@@ -83,6 +83,16 @@ diagram 英[ˈdaɪəgræm] 美[ˈdaɪəˌɡræm]
 
 [windows版本参考](http://www.cnblogs.com/xiong2ge/p/idea_windows_fast.html)
 
+
+IntelliJ IDEA for Mac 设置代码提示（Alt+/）或自动补全的快捷键
+左键点击屏幕左上角: IntelliJ IDEA
+点击选项菜单：Preferences 打开设置对话框
+在左侧的导航框中点击: KeyMap
+移除原来的Cycle Expand Word 的 Alt+/ 快捷键绑定。 
+在 Basic 上点击右键,去除原来的 Ctrl+空格 绑定,然后添加 Alt+/ 快捷键。 
+
+单元测试时可以选择method, class, package, open directory等不同维度
+
 **参考资料**
 <mark>推荐极客学院的相关教程</mark>[IntelliJ IDEA使用教程](http://wiki.jikexueyuan.com/project/intellij-idea-tutorial/)
 [intellij idea如何学习？](https://www.zhihu.com/question/53659760)
