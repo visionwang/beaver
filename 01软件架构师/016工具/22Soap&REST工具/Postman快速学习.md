@@ -20,3 +20,23 @@ Postman 是一个很强大的 API调试、Http请求的工具，当你还准备�
 她还...
 
 反正就是太特么好用了！！！
+
+
+[Postman配合Postman Intercepter使用](https://www.cnblogs.com/fluffy/p/7121092.html)
+
+
+
+http://blog.csdn.net/w8897282/article/details/69267599
+
+[Postman Interceptor Chrome插件下载](http://www.cnplugins.com/devtool/postman-interceptor/download.html)
+
+
+
+https://www.jianshu.com/p/d05f3c76ca07
+
+
+
+Postman: 这个有Chrome插件版和App版，我是使用了后者
+
+
+
