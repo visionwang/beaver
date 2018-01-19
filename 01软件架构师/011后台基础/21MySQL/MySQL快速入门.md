@@ -12,5 +12,13 @@
 
 
 
+mysql的 insert into ... on duplicate key ... 只能插入不能update的原因是因为：
 
+第一个字段必须是唯一索引或 unique 主键，
+
+第一个字段必须是唯一索引或 unique 主键，
+
+第一个字段必须是唯一索引或 unique 主键，否则执行就就只会insert 而不会执行update。
+
+https://yq.aliyun.com/ziliao/22834
 

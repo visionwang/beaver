@@ -51,6 +51,8 @@ Maven使用起来非常方便，配置卸载setting.xml中，如果是自己本�
 | mvn deploy -Dmaven.test.skip=true| 发布|
 | mvn clean| 清空生成的文件|
 | mvn install -X| 想要查看完整的依赖踪迹，包含那些因为冲突或者其它原因而被拒绝引入的构件，打开 Maven 的调试标记运行 |
+mvn install 是将你打好的jar包安装到你的本地库中，一般没有设置过是在 用户目录下的 .m2\下面。
+mvn package 只是将你的代码打包到输出目录，一般的是 target下面。
 Tip: 对于community版本的Idea就需要借助maven命令来启动tomcat容器。
 此外生产环境，有时会指定特殊版本的jar，因此需要使用systemscope，如下所示
 
