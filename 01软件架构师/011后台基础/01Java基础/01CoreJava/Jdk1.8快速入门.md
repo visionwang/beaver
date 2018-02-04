@@ -8,3 +8,18 @@
 
 
 # 进阶知识 #
+
+
+
+
+
+#常见问题
+
+http://blog.csdn.net/superit401/article/details/72731381
+
+
+sudo vim /etc/profile
+
+
+
+https://www.cnblogs.com/ultimateWorld/p/6477089.html

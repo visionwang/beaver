@@ -50,6 +50,7 @@
 |Command + Shift + F 全局查找（根据路径）|
 |Command + R 替换|
 |Control + Option + O 优化import，alt+enter 导入包，自动修改|
+|Command + Shift + U 大小写切换|
 
 |Control + Space 基本的代码补全（补全任何类、方法、变量）|
 |Control + Shift + Space 智能代码补全（过滤器方法列表和变量的预期类型）|

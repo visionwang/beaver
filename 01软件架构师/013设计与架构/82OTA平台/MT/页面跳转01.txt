@@ -1,0 +1,24 @@
+@startuml
+title "页面跳转"
+
+
+actor user
+participant "pd-ui" as client
+participant "admin-webapi" as webapi
+participant "permission-service" as service
+
+ 
+user->client: eo.dianping.com/xxxx
+client -> client: jumper拦截请求
+client -> webapi:鉴定权限
+webapi -> service: 鉴定权限
+webapi <-- service
+alt success case:
+  client <-- webapi: 200
+else fail case
+client <-- webapi: 501 backurl
+end
+
+user <-- client
+
+@enduml
