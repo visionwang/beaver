@@ -138,7 +138,8 @@ wait方法会将当前线程放入wait set，等待被唤醒，并放弃lock对�
 每个线程都有两个ObjectMonitor对象列表，分别为free和used列表，如果当前free列表为空，线程将向全局global list请求分配ObjectMonitor。
 
 
-
+#Java运行环境查询
+ps -aux | grep java
 
 
 

@@ -15,8 +15,6 @@ dubbo是默认推荐的方式，使用长连接，nio的形式。实现上就是
 
 
 
-
-
 # Dubbo #
 Dubbo是一个分布式服务框架，提供高性能透明化的RPC远程服务调用方案，并提供**SOA服务治理**方案，其核心部分包含:
 **远程通讯**: 提供对多种基于长连接的NIO框架抽象封装，包括多种线程模型，序列化，以及“请求-响应”模式的信息交换方式。
@@ -53,4 +51,6 @@ code first 或者 xml first  ： 支持使用code first 或者 xml first 的方�
 Tip:
 [dubbo官网](http://dubbo.io/)
 [CXF官网](http://cxf.apache.org/)
+
+
 

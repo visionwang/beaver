@@ -32,6 +32,7 @@ ftp工具： FIlezilla
 Http请求工具：[Postma](https://www.getpostman.com/)n居然是一个独立应用，NX，看看有木有比chrome的插件boomerang好用。
 Android传输工具：[Android File Transfer](https://www.android.com/filetransfer/)。
 数据库UI：sequel-pro-1.1.2 for mysql
+脚本工具：[zsh](http://ohmyz.sh/)
 
 Mac OS X系统
 数码测色计

@@ -32,7 +32,7 @@
 24. 设置`System settings->open project in new window`，避免每次都需要选择。
 25. 长语句可以通过在行号上右键，选择软分行增强可读性。
 
-[官方文档](ttp://www.jetbrains.com/idea/webhelp/getting-help.html)
+[官方文档](http://www.jetbrains.com/idea/webhelp/getting-help.html)
 
 #快捷键
 |  Editing（编辑） |
