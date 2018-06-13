@@ -31,6 +31,11 @@ CSRF 攻击简单来说，是多Tab页面浏览器的一个安全漏洞，比如
 
 
 
+[安全脉搏](https://www.secpulse.com/archives/tag/ssrf)
+
+可以的，居然是PM，有点意思！
+
+
 
 
 

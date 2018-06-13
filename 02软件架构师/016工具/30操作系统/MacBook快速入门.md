@@ -16,7 +16,7 @@ MD文档工具: MacDown免费很方便，就是换行要空2格。在偏好设�
 [OmniGraffle](https://bbs.feng.com/forum.php?mod=viewthread&tid=10739827)，木有那么好用
 Confluence中很好的集成了画图功能（plantuml, graphviz, draw.io）
 [Draw.io](https://www.draw.io/), <mark>最推荐</mark>，没有之一，和plantUML组合使用。 
-思维导图工具：Xmind，其在MacOS下并不好用。
+思维导图工具：Xmind，其在MacOS下并不好用。推荐MindMaster
 IDE： [idea](https://www.jetbrains.com/idea/), 与git完美集成
 简易代码编辑器： [VSCode](https://code.visualstudio.com/)，与git完美集成
 Http抓包工具： Charles

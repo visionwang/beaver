@@ -12,3 +12,14 @@ Stream操作分类
 短路操作(short-circuiting)	anyMatch() allMatch() noneMatch() findFirst() findAny()
 Stream上的所有操作分为两类：中间操作和结束操作，中间操作只是一种标记，只有结束操作才会触发实际计算。中间操作又可以分为无状态的(Stateless)和有状态的(Stateful)，无状态中间操作是指元素的处理不受前面元素的影响，而有状态的中间操作必须等到所有元素处理之后才知道最终结果，比如排序是有状态操作，在读取所有元素之前并不能确定排序结果；结束操作又可以分为短路操作和非短路操作，短路操作是指不用处理全部元素就可以返回结果，比如找到第一个满足条件的元素。之所以要进行如此精细的划分，是因为底层对每一种情况的处理方式不同。
 
+分区
+
+分区是一种特殊的分组，结果 map 至少包含两个不同的分组——一个true，一个false。例如，如果想找出最优秀的员工，你可以将所有雇员分为两组，一组销售量大于 N，另一组小于 N，使用 partitioningBy 收集器：
+
+1
+2
+Map<Boolean, List<Employee>> partitioned =
+  employees.stream().collect(partitioningBy(e -> e.getNumSales() > 150));
+
+  Map<String, List<Employee>> employeesByCity =
+  employees.stream().collect(groupingBy(Employee::getCity));
