@@ -8,6 +8,10 @@ http://plugins.jetbrains.com/plugin/7179-maven-helper
 
 1905年一群以亨利·马蒂斯为首的年轻画家在巴黎秋季沙龙展出自己的形象简单，色彩鲜艳大胆的作品，震惊了画坛，人们惊呼“这简直是野兽！”从此画坛上出现了一个新的野兽派。
 
+添加默认serialVersionUID
+https://blog.csdn.net/tiantiandjava/article/details/8781776
+
+Setting->Inspections->Serialization issues->Serializable class without ’serialVersionUID’ 
 
 
 排除编译，引入编译
@@ -73,3 +77,13 @@ http://color-themes.com/?view=index
 
 
 [IDEA中如果一个类被排除编译之后如何恢复编译](https://jingyan.baidu.com/article/9989c746eb4f15f648ecfe9d.html)
+
+
+    COVERAGE(1, "覆盖"),
+    PRICE(2, "价格"),
+    COMMISSION_RATE(3, "佣金率"),
+    PRE_BOOKING_PERIOD(4, "提前预定时长"),
+    CONFIRM_PERIOD(5, "确认时长"),
+    SHIPPING_PERIOD(6, "发货时长");
+
+    useGeneratedKeys="true"

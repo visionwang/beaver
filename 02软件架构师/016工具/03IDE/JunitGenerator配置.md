@@ -9,6 +9,6 @@ https://www.cnblogs.com/wangmingshun/p/6411885.html
 　　     Default Template选择JUnit 4。
 
 
-
+Command + shift + T
 
 

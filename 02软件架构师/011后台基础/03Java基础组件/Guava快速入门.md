@@ -25,3 +25,22 @@ https://www.cnblogs.com/dooor/p/5285484.html
 guava缓存：http://ifeve.com/google-guava/
 
 
+  SetView<Integer> intersection = Sets.intersection(sets, sets2);  
+        for (Integer temp : intersection) {  
+            System.out.println(temp);  
+        }  
+        // 差集  
+        System.out.println("差集为：");  
+        SetView<Integer> diff = Sets.difference(sets, sets2);  
+        for (Integer temp : diff) {  
+            System.out.println(temp);  
+        }  
+        // 并集  
+        System.out.println("并集为：");  
+        SetView<Integer> union = Sets.union(sets, sets2);  
+        for (Integer temp : union) {  
+            System.out.println(temp);  
+        }  
+
+
+        
